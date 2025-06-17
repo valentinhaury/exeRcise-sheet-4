@@ -38,7 +38,7 @@ bb_multipolygon <- bb_polygon$multipolygon
 ```
 While the bounding box matrix is easier to compute, the polygon format allows for more details and accuracy.
 
-b) Create two different plots of the city outline using the polygon format: one interactive and one non-interactive. Customize the plots so that:
+### b) Create two different plots of the city outline using the polygon format: one interactive and one non-interactive. Customize the plots so that:
   - The borders are shown in "darkblue"
   - You add a title to each map using tm_layout
   - The interactive map allows zooming and panning
@@ -61,12 +61,12 @@ tm_shape(bb_multipolygon) +
   tm_layout(title = "Interactive map of Barcelona")
 ```
 
-c) 
+### c) 
 While interactive maps are great for use in an online setting because they allow zooming
 and scrolling they use all their abilities in document-formats like pdf or paper.
 
 
-d) 
+### d) 
 	
 ```{r}
 #getting the museum data and displaying it as red dots on the OpenStreetMap
@@ -85,7 +85,7 @@ tm_shape(museum_points) +
 ```
 
 
-e) Filter the museums to only those that have a name. Then, use {leaflet} to create an interactive map that displays a popup with each museum’s name when clicked. 
+### e) Filter the museums to only those that have a name. Then, use {leaflet} to create an interactive map that displays a popup with each museum’s name when clicked. 
 
 Ensure the map:
 	-	Centers over Barcelona.
@@ -121,20 +121,71 @@ leaflet(museum_points_named) %>%
 
 Oops, we spent too much money in Barcelona. On our next stop in Berlin, we'd like to plan more budget-friendly and find a simple accommodation option such as a hostel. For this, we'll be using OpenStreetMaps.
 
-a) Search for the correct tag to identify *affordable accommodation* in OpenStreetMaps. Write down the tag below and add the URL to its OSMWiki page. 
+### a)
 
-b) Write an {osmdata} query that downloads all hostels in Berlin using a bounding box. How many hostels are there in Berlin?
-Explain how you interpret points, polygons, and lines in the query results. If no lines are returned (as is often the case for buildings), explain why this is expected. 
+Tag: tourism=hostel
 
-c) Since there are quite a few hostels, we want to limit our search a bit. How many of the hostels have a name? How many also include information on the number of beds? 
+[OSM-Wiki-tourism=hostel](https://wiki.openstreetmap.org/wiki/Tag:tourism%3Dhostel)
 
-> Hint: If you have trouble working with the result, look at the different types of result in there. We're only interested in osm_points here.
+### b)  
 
-d) Use tm_dots() to plot the hostels in Berlin on an *interactive* map 
+```{r}
+# get berlin data
+bbox_berlin <- getbb("Berlin, Germany")
 
-	-	Color the dots based on the type of internet access provided by each hostel (internet_access). 
-	-	Use the hostel’s name as the ID to display when hovering over a dot on the map. 
-	-	Choose an appropriate color palette and	add a title to the map indicating that it shows hostels in Berlin by internet access.
+# get only hostels
+hostels_berlin <- opq(bbox = bbox_berlin) %>%
+  add_osm_feature(key = "tourism", value = "hostel") %>%
+  osmdata_sf()
+
+# count the different variabls and sum
+n_hostels_points <- nrow(hostels_berlin$osm_points)
+n_hostels_polygons <- nrow(hostels_berlin$osm_polygons)
+n_hostels_lines <- nrow(hostels_berlin$osm_lines)
+
+total_hostels <- n_hostels_polygons + n_hostels_points + n_hostels_lines
+
+```
+
+In Berlin are between `r n_hostels_points` and `r total_hostels` hostels. If a hostel is listed as a point only the location is available. If a hostel is listed
+as a polygon there is also an additional information about the shape of the hostel on the map available. 
+Because i am not sure if a hostel can be listed as a point and a polygon at the same time i put the number of total hostels as a range to cover
+all possible combinations.
+Lines are used for linear features like borders or rivers and buildings are not linear.
+
+### c) 
+
+```{r}
+# sums over the different variables
+n_with_name <- sum(!is.na(hostels_berlin$osm_points$name))
+
+n_with_name_and_beds <- sum(!is.na(hostels_berlin$osm_points$name) & !is.na(hostels_berlin$osm_points$beds))
+```
+
+There are `r n_with_name` hostels with a name and of those `r n_with_name_and_beds` also have information about the number of beds.
+
+### d) 
+
+	
+```{r, warning = FALSE, message = FALSE}
+hostel_points_filtered <- hostels_berlin$osm_points %>%
+  filter(!is.na(internet_access) & !is.na(name))
+
+tmap_mode("view")
+
+tm_shape(hostel_points_filtered) +
+  tm_dots(
+    col = "internet_access",
+    id = "name",
+    palette = "Set2"
+  ) +
+  tm_layout(
+    title = "Hostels in Berlin by Internet Access",
+    legend.outside = TRUE
+  )
+
+```
+
 
 e) Your grandma, who lives in Berlin, just called and said she wanted to come visit you at the hostels. Grandma is struggling with walking up stairs. Create a bar chart using {ggplot2} showing wheelchair-accessibility from the named hostels. You can use str() for the variable you saved in the previous exercise to find the proper variable for wheelchair-accessible hostels. Filter the dataset to include only hostels where wheelchair is "yes", "limited", or "no". Then, represent the following:
 	-	"yes" for full accessibility,
