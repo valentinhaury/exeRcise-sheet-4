@@ -168,6 +168,7 @@ There are `r n_with_name` hostels with a name and of those `r n_with_name_and_be
 
 	
 ```{r, warning = FALSE, message = FALSE}
+# filter hostel with a name and information about the internet access and create a interactive map
 hostel_points_filtered <- hostels_berlin$osm_points %>%
   filter(!is.na(internet_access) & !is.na(name))
 
@@ -186,13 +187,48 @@ tm_shape(hostel_points_filtered) +
 
 ```
 
+### e)
 
-e) Your grandma, who lives in Berlin, just called and said she wanted to come visit you at the hostels. Grandma is struggling with walking up stairs. Create a bar chart using {ggplot2} showing wheelchair-accessibility from the named hostels. You can use str() for the variable you saved in the previous exercise to find the proper variable for wheelchair-accessible hostels. Filter the dataset to include only hostels where wheelchair is "yes", "limited", or "no". Then, represent the following:
-	-	"yes" for full accessibility,
-	-	"limited" for limited accessibility,
-	-	"no" for no accessibility.
+```{r}
+# filter hostels with a name, look for wheelchair variable and filter for that variable beeing not empty
+named_hostel_points <- hostels_berlin$osm_points %>%
+  filter(!is.na(name))
 
-f) We're almost done! Lastly, select one of the hostels that you find appealing and return only its row in the data. What's the name of the hostel you chose and why did you choose this one?
+str(named_hostel_points[, 78:79])
+
+wheelchair_description_available <- named_hostel_points %>%
+  filter(!is.na(wheelchair))
+
+```
+
+```{r}
+# create a bar plot witht the wheelchair variable
+ggplot(wheelchair_description_available, aes(x = wheelchair, fill = wheelchair)) +
+  geom_bar() +
+  scale_fill_manual(
+    values = c("yes" = "green", "limited" = "orange", "no" = "red"),
+    name = "Wheelchair Access",
+    labels = c("yes" = "full accessibility", "limited" = "limited accessibility", "no" = "no accessibility")
+  ) +
+  labs(
+    title = "Wheelchair-Accessibility of Hostels in Berlin",
+    x = "Accessibility Level",
+    y = "Number of Hostels"
+  )
+```
+
+### f)
+
+```{r}
+
+heart_of_gold <- named_hostel_points %>%
+  filter(name == "Heart of Gold Hostel Berlin")
+
+heart_of_gold[, 1:15]
+
+```
+
+The Heart of gold Hostel has an entrance in the bike and bed column, that means it is certified by the adfc to be a good hostel for cyclists.
 
 ## Exercise 3: It's coming home (6 Points)
 
