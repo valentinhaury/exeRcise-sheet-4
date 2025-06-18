@@ -21,6 +21,8 @@ output: html_document
   library(tmap)
   library(leaflet)
   library(sf)
+  library(gganimate)
+  library(gifski)
 ```
 
 
@@ -220,7 +222,7 @@ ggplot(wheelchair_description_available, aes(x = wheelchair, fill = wheelchair))
 ### f)
 
 ```{r}
-
+# select the hear of gold hostel
 heart_of_gold <- named_hostel_points %>%
   filter(name == "Heart of Gold Hostel Berlin")
 
@@ -232,14 +234,91 @@ The Heart of gold Hostel has an entrance in the bike and bed column, that means 
 
 ## Exercise 3: It's coming home (6 Points)
 
-In this exercise you will analyze and visualize some datasets, that contain information on every professional football match played in the UK since 1888. 
-You can access the data via this GitHub repository: <https://github.com/jfjelstul/englishfootball>
+### a) 
 
-a) Load the `{matches.csv}` file from the `{data}` folder. Visualize how the number of total goals scored per game has evolved over time. Create a nice and complete plot and interpret what you see in one or two sentences. 
+```{r}
+# read all the data for the matches
+#matches <- read_csv("https://github.com/jfjelstul/englishfootball/blob/master/data-csv/matches.csv")
+matches <- read_csv("data\\matches.csv")
+# add home and away goals in the mactches group them by season and calculate the mean for goals per game
+goals_per_season <- matches %>%
+  mutate(total_goals = home_team_score + away_team_score) %>%
+  group_by(season) %>%
+  summarise(avg_goals_per_game = mean(total_goals, na.rm = TRUE))
+# create a line plot with the individual points showing the avg goals per game in each season
+ggplot(goals_per_season, aes(x = season, y = avg_goals_per_game)) +
+  geom_line(color = "lightblue", size = 1.2) +
+  geom_point(color = "blue", size = 2) +
+  labs(
+    title = "Average Total Goals per Game in English Football",
+    x = "Season",
+    y = "Average Goals per Game"
+  )
 
-b) Now create an animated version of your plot and include the GIF in your HTML 
+```
+
+The plot shows the average number of goals per game(AGPG) on the y-achsis and the season on the x-achsis. In the earliest seasons the AGPG where the highest, from 1900 to 1925 the numbers between 2.75 and 3.1 rising again to a higher average until 1965 and then the AGPG stayed relatively consistent at around 2.6.
+
+
+### b)
+
+```{r, eval = FALSE}
+
+goals_per_season <- matches %>%
+  mutate(total_goals = home_team_score + away_team_score) %>%
+  group_by(season) %>%
+  summarise(avg_goals_per_game = mean(total_goals, na.rm = TRUE),
+            .groups = "drop")
+
+# creating and saving an animated plot
+animated_plot <- ggplot(goals_per_season, aes(x = season, y = avg_goals_per_game)) +
+  geom_line(color = "lightblue", size = 1.2) +
+  geom_point(color = "blue", size = 2) +
+  labs(
+    title = "Average Total Goals per Game in English Football over the years",
+    x = "Season",
+    y = "Average Goals per Game"
+  ) +
+  transition_reveal(season) +
+  ease_aes('linear')
+
+
+anim_save("avg_goals_per_season.gif", animation = animate(animated_plot, width = 800, height = 500, fps = 10))
+
+```
+
+![Animated Plot](avg_goals_per_season.gif)
+
+I set eval=FALSE because somethin with the animation doesnt work in the Knitting process.
 
 c) Load the `{standings.csv}` dataset. We will now analyze how Liverpool FC has performed over the years. Create an animated plot that contains the number of points and the final placement of LFC for every year they have participated in professional football. The exact visualization is up to you.
+
+```{r}
+#standings <- read_csv("https://github.com/jfjelstul/englishfootball/blob/master/data-csv/standings.csv")
+standings <- read_csv("data\\standings.csv")
+
+liverpool_standings <- standings %>%
+  filter(team_name == "Liverpool") %>%
+  select(season, team_name, points, position) %>%
+  arrange(season)
+
+liverpool_plot <- ggplot(liverpool_standings, aes(x = season, y = points)) +
+  geom_line(color = "darkred", size = 1.2) +
+  geom_text(aes(label = position), size = 10) +
+  labs(
+    title = "Liverpool standings through the years",
+    x = "Season",
+    y = "Points"
+  ) +
+  transition_reveal(season) +
+  shadow_mark(past = TRUE, future = FALSE) + 
+  ease_aes("linear")
+
+
+anim_save("liverpool.gif", animation = animate(liverpool_plot, width = 800, height = 500, fps = 10))
+
+```
+
 
 d) Adjust the velocity of your animations. Also change one of your axes with respect to being fixed or not. 
 
