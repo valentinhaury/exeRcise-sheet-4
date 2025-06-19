@@ -25,6 +25,7 @@ output: html_document
   library(gifski)
 ```
 
+### Link to my [GitHub](https://github.com/valentinhaury/exeRcise-sheet-4)
 
 # Planning a city trip around Europe
 
@@ -40,10 +41,7 @@ bb_multipolygon <- bb_polygon$multipolygon
 ```
 While the bounding box matrix is easier to compute, the polygon format allows for more details and accuracy.
 
-### b) Create two different plots of the city outline using the polygon format: one interactive and one non-interactive. Customize the plots so that:
-  - The borders are shown in "darkblue"
-  - You add a title to each map using tm_layout
-  - The interactive map allows zooming and panning
+### b)
   
 ```{r}
 #creates a non-interactive map of Barcelona
@@ -65,7 +63,7 @@ tm_shape(bb_multipolygon) +
 
 ### c) 
 While interactive maps are great for use in an online setting because they allow zooming
-and scrolling they use all their abilities in document-formats like pdf or paper.
+and scrolling they loose all their abilities in document-formats like pdf or paper.
 
 
 ### d) 
@@ -87,11 +85,7 @@ tm_shape(museum_points) +
 ```
 
 
-### e) Filter the museums to only those that have a name. Then, use {leaflet} to create an interactive map that displays a popup with each museum’s name when clicked. 
-
-Ensure the map:
-	-	Centers over Barcelona.
-	-	Uses a light basemap (e.g., CartoDB.Positron).
+### e)
 	
 ```{r}
 # filter for museums with a name
@@ -121,8 +115,6 @@ leaflet(museum_points_named) %>%
 
 ## Exercise 2: Finding Accommodation in Berlin (5 Points)
 
-Oops, we spent too much money in Barcelona. On our next stop in Berlin, we'd like to plan more budget-friendly and find a simple accommodation option such as a hostel. For this, we'll be using OpenStreetMaps.
-
 ### a)
 
 Tag: tourism=hostel
@@ -145,7 +137,7 @@ n_hostels_points <- nrow(hostels_berlin$osm_points)
 n_hostels_polygons <- nrow(hostels_berlin$osm_polygons)
 n_hostels_lines <- nrow(hostels_berlin$osm_lines)
 
-total_hostels <- n_hostels_polygons + n_hostels_points + n_hostels_lines
+total_hostels <- n_hostels_polygons + n_hostels_points
 
 ```
 
@@ -289,11 +281,11 @@ anim_save("avg_goals_per_season.gif", animation = animate(animated_plot, width =
 
 ![Animated Plot](avg_goals_per_season.gif)
 
-I set eval=FALSE because somethin with the animation doesnt work in the Knitting process.
+I set eval=FALSE for all animated plots because something with the animation doesnt work in the Knitting process.
 
-c) Load the `{standings.csv}` dataset. We will now analyze how Liverpool FC has performed over the years. Create an animated plot that contains the number of points and the final placement of LFC for every year they have participated in professional football. The exact visualization is up to you.
+### c)
 
-```{r}
+```{r, eval = FALSE}
 #standings <- read_csv("https://github.com/jfjelstul/englishfootball/blob/master/data-csv/standings.csv")
 standings <- read_csv("data\\standings.csv")
 
@@ -302,23 +294,87 @@ liverpool_standings <- standings %>%
   select(season, team_name, points, position) %>%
   arrange(season)
 
-liverpool_plot <- ggplot(liverpool_standings, aes(x = season, y = points)) +
-  geom_line(color = "darkred", size = 1.2) +
-  geom_text(aes(label = position), size = 10) +
+max_points <- max(liverpool_standings$points, na.rm = TRUE)
+min_points <- min(liverpool_standings$points, na.rm = TRUE)
+max_position <- max(liverpool_standings$position, na.rm = TRUE)
+min_position <- min(liverpool_standings$position, na.rm = TRUE)
+
+scale_factor <- (max_points - min_points) / (max_position - min_position)
+
+liverpool_standings$position_scaled <- max_points - (liverpool_standings$position - min_position) * scale_factor
+
+liverpool_standings$position_medal <- with(liverpool_standings, ifelse(
+  position == 1, "Gold",
+  ifelse(position == 2, "Silver",
+         ifelse(position == 3, "Bronze", "other"))
+))
+
+medal_colors <- c(
+  "Gold" = "#FFD700",
+  "Silver" = "#C0C0C0",
+  "Bronze" = "#CD7F32",
+  "other" = "lightgreen"
+)
+
+liverpool_plot <- ggplot(liverpool_standings, aes(x = season))  +
+  geom_col(
+    aes(y = position_scaled, group = season, fill = position_medal)
+  ) +
+  scale_fill_manual(values = medal_colors, name = "Platzierung") +
+  geom_line(aes(y = points), color = "darkred", size = 1.2) +
+  scale_y_continuous(
+    name = "Points",
+    sec.axis = sec_axis(
+      trans = ~ (max_points - .) / scale_factor + min_position,
+      name = "League Position",
+      breaks = seq(min_position, max_position, by = 1)
+    )
+  ) +
+
   labs(
-    title = "Liverpool standings through the years",
-    x = "Season",
-    y = "Points"
+    title = "Liverpool: Points and League Position by Season",
+    x = "Season"
   ) +
   transition_reveal(season) +
-  shadow_mark(past = TRUE, future = FALSE) + 
+  shadow_mark(past = TRUE, future = FALSE, exclude_layer = NULL) +
   ease_aes("linear")
 
 
-anim_save("liverpool.gif", animation = animate(liverpool_plot, width = 800, height = 500, fps = 10))
+
+anim_save("liverpool.gif", animation = animate(liverpool_plot, end_pause = 20, width = 800, height = 500, fps = 10))
 
 ```
+![Standings Animated](liverpool.gif)
 
+### d)
 
-d) Adjust the velocity of your animations. Also change one of your axes with respect to being fixed or not. 
+```{r, eval = FALSE}
+liverpool_plot2 <- ggplot(liverpool_standings, aes(x = season))  +
+  geom_col(
+    aes(y = position_scaled, group = season, fill = position_medal)
+  ) +
+  scale_fill_manual(values = medal_colors, name = "Platzierung") +
+  geom_line(aes(y = points, group = 1, color = "Points"), size = 1.2) +
+  scale_color_manual(values = c("Points" = "darkred"), name = NULL) +
+  scale_y_continuous(
+    name = "Points",
+    sec.axis = sec_axis(
+      trans = ~ (max_points - .) / scale_factor + min_position,
+      name = "League Position",
+      breaks = seq(min_position, max_position, by = 1)
+    )
+  ) +
 
+  labs(
+    title = "Liverpool: Points and League Position by Season",
+    x = "Season"
+  ) +
+  transition_reveal(season) +
+  view_follow(fixed_x = FALSE, fixed_y = TRUE) +
+  shadow_mark(past = TRUE, future = FALSE, exclude_layer = NULL) +
+  ease_aes("linear")
+
+anim_save("liverpool2.gif", animation = animate(liverpool_plot2, end_pause = 20, width = 800, height = 500, fps = 6))
+```
+
+![Standings dynamically Animated](liverpool2.gif)
